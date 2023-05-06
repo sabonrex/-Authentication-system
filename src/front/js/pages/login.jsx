@@ -1,61 +1,69 @@
-import React, { useState, useContext } from "react";
+import React, { useContext, useState } from "react";
 import { Context } from "../store/appContext";
+import "../../styles/home.css";
+import { useHistory } from "react-router-dom";
 
-const Login = () => {
-    const { store, actions } = useContext(Context);
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+export const Login = () => {
+	const { store, actions } = useContext(Context);
+	const [email, setEmail] = useState(null);
+	const [password, setPassword] = useState(null);
+	let history = useHistory();
 
-    const handleLogin = async () => {
-        try {
-            const response = await actions.login(email, password);
-            console.log(response);
-        } catch (error) {
-            console.log(error);
-        }
-    };
+	async function login(event) {
+		event.preventDefault();
+		const response = await fetch(process.env.BACKEND_URL + "/api/login", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify({
+				email: email,
+				password: password
+			})
+		});
 
-    return (
-        <>
-            <div className="container-fluid">
-                <div className="contactForm container border mt-5 pb-5">
-                    <div className="d-flex justify-content-center">
-                        <h1 className="fs-1 fw-bold mt-5">Login</h1>
-                    </div>
-                    <div className="form-control border border-0 ps-4 pe-4">
-                        <form>
-                            <label htmlFor="email" className="form-label fs-5">
-                                Email
-                            </label>
-                            <input
-                                className="form-control mb-3"
-                                type="email"
-                                id="email"
-                                placeholder="Enter email"
-                                onChange={(e) => setEmail(e.target.value)}
-                            />
-                            <label htmlFor="password" className="form-label fs-5">Password</label>
-                            <input
-                                type="password"
-                                className="form-control mb-3"
-                                id="password"
-                                placeholder="Enter password"
-                                onChange={(e) => setPassword(e.target.value)}
-                            />
-                            <div className="d-flex justify-content-center">
-                                <button
-                                    type="button"
-                                    className="button-save col-md-2 btn btn-success fs-6 mt-3"
-                                    onClick={handleLogin}
-                                >
-                                    Login
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </>)
-}
+		if (!response.ok) throw Error("There was a problem in the login request");
 
-export default Login;
+		if (response.status === 401) {
+			throw "Invalid";
+		} else if (response.status === 400) {
+			throw "Invalid";
+		}
+		const data = await response.json();
+		// save your token in the localStorage
+		//also you should set your user into the store using the setStore function
+		localStorage.setItem("jwt-token", data.token);
+		actions.setUser_token(data.token);
+
+		history.push("/protected");
+	}
+
+	return (
+		<div className="container">
+			<h1>Log in</h1>
+			<form onSubmit={login}>
+				<div className="form-group">
+					<input
+						type="email"
+						className="form-control"
+						placeholder="email"
+						onChange={event => setEmail(event.target.value)}
+						required
+					/>
+				</div>
+				<div className="form-group">
+					<input
+						type="password"
+						className="form-control"
+						placeholder="password"
+						onChange={event => setPassword(event.target.value)}
+						required
+					/>
+				</div>
+				<button type="submit" className="btn btn-primary">
+					Login
+				</button>
+			</form>
+		</div>
+	);
+};
